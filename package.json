@@ -1,5 +1,5 @@
 {
-  "name": "@vordex/turtle.js",
+  "name": "turtle-graphics",
   "main": "dist/cjs/index.js",
   "module": "dist/esm/index.js",
   "types": "dist/esm/index.d.ts",
