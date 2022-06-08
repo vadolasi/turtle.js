@@ -10,10 +10,10 @@ export class Turtle {
 
   constructor() {
     this.group = this.draw.group()
-    this.turtle = this.group.polygon("0,0 0,15 15,7.5")
+    this.turtle = this.group.polygon("0,0 4,7.5 0,15 15,7.5")
   }
 
-  private drawLine(xMove: number, yMove: number) {
+  private drawLine(x: number, y: number) {
     this.draw
       .line(
         this.position[0],
@@ -23,30 +23,26 @@ export class Turtle {
       )
       .stroke({ width: 1, color: "black" })
       .animate()
-      .plot(
-        this.position[0],
-        this.position[1],
-        this.position[0] + xMove,
-        this.position[1] - yMove
-      )
+      .plot(this.position[0], this.position[1], x, y)
+  }
+
+  private async move(x: number, y: number) {
+    if (this.isPenDown) {
+      this.drawLine(x, y)
+    }
+
+    await new Promise((resolve) => {
+      this.group.animate().center(x, y).after(resolve)
+    })
+    this.position[0] = x
+    this.position[1] = y
   }
 
   async forward(distance: number) {
     const xMove = distance * Math.cos((this.angle * Math.PI) / 180)
     const yMove = distance * Math.sin((this.angle * Math.PI) / 180)
 
-    if (this.isPenDown) {
-      this.drawLine(xMove, yMove)
-    }
-
-    await new Promise((resolve) => {
-      this.group
-        .animate()
-        .center(this.position[0] + xMove, this.position[1] - yMove)
-        .after(resolve)
-    })
-    this.position[0] += xMove
-    this.position[1] -= yMove
+    await this.move(this.position[0] + xMove, this.position[1] - yMove)
   }
 
   fd = this.forward
@@ -58,16 +54,18 @@ export class Turtle {
   bk = this.backward
   back = this.backward
 
-  right(angle: number) {
+  async right(angle: number) {
     this.angle = (this.angle + angle) % 360
-    this.turtle.rotate(-angle)
+    await new Promise((resolve) =>
+      // @ts-ignore
+      this.turtle.animate().rotate(-angle).after(resolve)
+    )
   }
 
   rt = this.right
 
-  left(angle: number) {
-    this.angle = (this.angle - angle) % 360
-    this.turtle.rotate(angle)
+  async left(angle: number) {
+    await this.right(-angle)
   }
 
   lt = this.left
@@ -85,4 +83,19 @@ export class Turtle {
 
   pu = this.penUp
   up = this.penUp
+
+  async goto(x: number, y: number) {
+    await this.move(x, y)
+  }
+
+  setpos = this.goto
+  setposition = this.goto
+
+  async setx(x: number) {
+    await this.move(x, this.position[1])
+  }
+
+  async sety(y: number) {
+    await this.move(this.position[0], y)
+  }
 }
