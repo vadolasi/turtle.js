@@ -2,11 +2,16 @@ import { Polygon, SVG } from "@svgdotjs/svg.js"
 
 export class Turtle {
   private angle: number = 0
+  private angleUnit: "degrees" | "radians" = "degrees"
+  private fullCircle = 360
   private _position: [number, number] = [0, 0]
   private isPenDown: boolean = true
   private draw = SVG().addTo("#turtle").viewbox("-256 -256 512 512")
   private group = this.draw.group()
-  private turtle = this.group.polygon("0,0 4,7.5 0,15 15,7.5").center(0, 0)
+  private turtle = this.group
+    .polygon("0,0 4,7.5 0,15 15,7.5 30,7.5 15,7.5")
+    .center(0, 0)
+
   private stamps: { [key: number]: Polygon } = {}
   private nextStampId: number = 1
   private speedNormalize = 3
@@ -64,8 +69,19 @@ export class Turtle {
   bk = this.backward
   back = this.backward
 
+  private convertAngle(angle: number) {
+    if (this.angleUnit === "degrees") {
+      return (360 * angle) / this.fullCircle
+    } else {
+      return angle * (180 / Math.PI)
+    }
+  }
+
   async right(angle: number) {
+    angle = this.convertAngle(angle)
+
     this.angle = (this.angle + angle) % 360
+
     await new Promise((resolve) =>
       this.turtle
         .animate((Math.abs(angle) / this._speed) * this.speedNormalize)
@@ -135,11 +151,11 @@ export class Turtle {
     }
   }
 
-  dot(size: number = 1, color: string = "black") {
+  dot(size: number = 5, color: string = "black") {
     this.draw
       .circle(size)
       .fill(color)
-      .center(this._position[0] + 15, this._position[1] + 7.5)
+      .center(this._position[0], this._position[1])
   }
 
   stamp() {
@@ -196,9 +212,9 @@ export class Turtle {
   speed(speed: number): void
   speed(speed?: number) {
     if (speed) {
-      return this._speed
-    } else {
       this._speed = speed
+    } else {
+      return this._speed
     }
   }
 
@@ -222,7 +238,7 @@ export class Turtle {
   }
 
   heading() {
-    return this.angle
+    return this.convertAngle(this.angle)
   }
 
   distance(x: number, y: number): number
@@ -246,5 +262,14 @@ export class Turtle {
       Math.pow(fromX - this._position[0], 2) +
         Math.pow(fromY - this._position[1], 2)
     )
+  }
+
+  degrees(fullcircle: number = 360) {
+    this.angleUnit = "degrees"
+    this.fullCircle = fullcircle
+  }
+
+  radians() {
+    this.angleUnit = "radians"
   }
 }
