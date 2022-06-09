@@ -16,6 +16,7 @@ export class Turtle {
   private nextStampId: number = 1
   private speedNormalize = 3
   private _speed = 6
+  private penSize: number = 1
 
   private drawLine(x: number, y: number) {
     const distance = Math.sqrt(
@@ -98,20 +99,6 @@ export class Turtle {
   }
 
   lt = this.left
-
-  penDown() {
-    this.isPenDown = true
-  }
-
-  pd = this.penDown
-  down = this.penDown
-
-  penUp() {
-    this.isPenDown = false
-  }
-
-  pu = this.penUp
-  up = this.penUp
 
   async goto(x: number, y: number) {
     await this.move(x, y)
@@ -271,5 +258,38 @@ export class Turtle {
 
   radians() {
     this.angleUnit = "radians"
+  }
+
+  penDown() {
+    this.isPenDown = true
+  }
+
+  pd = this.penDown
+  down = this.penDown
+
+  penUp() {
+    this.isPenDown = false
+  }
+
+  pu = this.penUp
+  up = this.penUp
+
+  pensize(): number
+  pensize(size: number): void
+  pensize(size?: number): void | number {
+    if (size) {
+      this.penSize = size
+    } else {
+      return this.penSize
+    }
+  }
+
+  width = this.pensize
+
+  // TODO: implement this function
+  pen() {}
+
+  isdown() {
+    return this.isPenDown
   }
 }
