@@ -16,5 +16,7 @@
     "@typescript-eslint",
     "prettier"
   ],
-  "rules": {}
+  "rules": {
+    "no-dupe-class-members": "off"
+  }
 }

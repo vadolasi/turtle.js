@@ -7,14 +7,21 @@ export class Turtle {
   turtle: Polygon
   isPenDown: boolean = true
   private draw = SVG().addTo("#turtle").viewbox("-256 -256 512 512")
-  private stamps = []
+  private stamps: { [key: number]: Polygon } = {}
+  private nextStampId: number = 1
+  private speedNormalize = 3
+  private _speed = 6
 
   constructor() {
     this.group = this.draw.group()
-    this.turtle = this.group.polygon("0,0 4,7.5 0,15 15,7.5")
+    this.turtle = this.group.polygon("0,0 4,7.5 0,15 15,7.5").center(0, 0)
   }
 
   private drawLine(x: number, y: number) {
+    const distance = Math.sqrt(
+      Math.pow(x - this.position[0], 2) + Math.pow(y - this.position[1], 2)
+    )
+
     this.draw
       .line(
         this.position[0],
@@ -23,7 +30,7 @@ export class Turtle {
         this.position[1]
       )
       .stroke({ width: 1, color: "black" })
-      .animate()
+      .animate((distance / this._speed) * this.speedNormalize)
       .plot(this.position[0], this.position[1], x, y)
   }
 
@@ -33,7 +40,14 @@ export class Turtle {
     }
 
     await new Promise((resolve) => {
-      this.group.animate().center(x, y).after(resolve)
+      const distance = Math.sqrt(
+        Math.pow(x - this.position[0], 2) + Math.pow(y - this.position[1], 2)
+      )
+
+      this.group
+        .animate((distance / this._speed) * this.speedNormalize)
+        .center(x, y)
+        .after(resolve)
     })
     this.position[0] = x
     this.position[1] = y
@@ -58,8 +72,11 @@ export class Turtle {
   async right(angle: number) {
     this.angle = (this.angle + angle) % 360
     await new Promise((resolve) =>
-      // @ts-ignore
-      this.turtle.animate().rotate(-angle).after(resolve)
+      this.turtle
+        .animate((Math.abs(angle) / this._speed) * this.speedNormalize)
+        // @ts-ignore
+        .rotate(-angle)
+        .after(resolve)
     )
   }
 
@@ -115,8 +132,10 @@ export class Turtle {
     extent: number = 360,
     steps: number | null = null
   ) {
+    const circlePrecision = 10
+
     if (steps === null) {
-      steps = Math.ceil(Math.abs(extent) / 10)
+      steps = Math.ceil(Math.abs(extent) / circlePrecision)
     }
     const angle = extent / steps
     for (let i = 0; i < steps; i++) {
@@ -133,17 +152,62 @@ export class Turtle {
   }
 
   stamp() {
-    this.stamps.push(
-      this.draw
-        .polygon("0,0 4,7.5 0,15 15,7.5")
-        .center(this.position[0], this.position[1])
-    )
+    const id = this.nextStampId
+    const polygon = this.draw
+      .polygon("0,0 4,7.5 0,15 15,7.5")
+      .center(this.position[0], this.position[1])
+      .rotate(-this.angle)
 
-    return this.stamps.length - 1
+    this.stamps[id] = polygon
+
+    this.nextStampId++
+
+    return id
   }
 
   clearstemp(id: number) {
     this.stamps[id].remove()
-    this.stamps.splice(id, 1)
+    delete this.stamps[id]
+  }
+
+  clearstamps(quantity: number | null = null) {
+    if (quantity === null) {
+      quantity = Object.keys(this.stamps).length
+    }
+
+    const ids = Object.keys(this.stamps)
+
+    if (quantity > 0) {
+      for (let i = 0; i < quantity; i++) {
+        if (ids.length > 0) {
+          this.clearstemp(Number(ids[0]))
+          ids.splice(0, 1)
+        } else {
+          break
+        }
+      }
+    } else {
+      for (let i = ids.length - 1; i >= -quantity; i--) {
+        if (ids.length > 0) {
+          this.clearstemp(Number(ids[i]))
+          ids.slice(i, 1)
+        } else {
+          break
+        }
+      }
+    }
+  }
+
+  // TODO: implement this function
+  async undo(quantity: number | null = null) {}
+
+  speed(): number
+  speed(speed: number): void
+  speed(speed: number | null = null) {
+    if (speed === null) {
+      return this._speed
+    } else {
+      this._speed = speed
+    }
   }
 }
