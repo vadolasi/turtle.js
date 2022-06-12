@@ -1,7 +1,8 @@
 {
   "env": {
     "es2021": true,
-    "jest": true
+    "jest": true,
+    "browser": true
   },
   "extends": [
     "standard",

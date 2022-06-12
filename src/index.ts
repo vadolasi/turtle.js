@@ -1,4 +1,4 @@
-import { Polygon, SVG } from "@svgdotjs/svg.js"
+import { G, Polygon, SVG, Svg } from "@svgdotjs/svg.js"
 
 export class Turtle {
   private angle: number = 0
@@ -6,23 +6,46 @@ export class Turtle {
   private fullCircle = 360
   private _position: [number, number] = [0, 0]
   private isPenDown: boolean = true
-  private draw = SVG().addTo("#turtle").viewbox("-256 -256 512 512")
-  private group = this.draw.group()
-  private turtle = this.group
-    .polygon("0,0 4,7.5 0,15 15,7.5 30,7.5 15,7.5")
-    .center(0, 0)
-
+  private screenWidth: number
+  private screenHeight: number
+  private draw: Svg
+  private group: G
+  private turtle: Polygon
   private stamps: { [key: number]: Polygon } = {}
   private nextStampId: number = 1
   private speedNormalize = 3
   private _speed = 6
   private penSize: number = 1
 
-  private drawLine(x: number, y: number) {
+  constructor(root: HTMLElement) {
+    this.screenWidth = root.offsetWidth
+    this.screenHeight = root.offsetHeight
+    this.draw = SVG()
+      .addTo(root)
+      .viewbox(
+        `-${this.screenWidth / 2}, -${this.screenHeight / 2}, ${
+          this.screenWidth
+        }, ${this.screenHeight}`
+      )
+    this.group = this.draw.group()
+    this.turtle = this.group
+      .polygon("0,0 4,7.5 0,15 15,7.5 30,7.5 15,7.5")
+      .center(0, 0)
+  }
+
+  private getMoveDuration(x: number, y: number) {
     const distance = Math.sqrt(
       Math.pow(x - this._position[0], 2) + Math.pow(y - this._position[1], 2)
     )
 
+    if (this._speed > 0) {
+      return (Math.abs(distance) / this._speed) * this.speedNormalize
+    } else {
+      return 0
+    }
+  }
+
+  private drawLine(x: number, y: number) {
     this.draw
       .line(
         this._position[0],
@@ -31,7 +54,7 @@ export class Turtle {
         this._position[1]
       )
       .stroke({ width: 1, color: "black" })
-      .animate((distance / this._speed) * this.speedNormalize)
+      .animate(this.getMoveDuration(x, y))
       .plot(this._position[0], this._position[1], x, y)
   }
 
@@ -41,14 +64,7 @@ export class Turtle {
     }
 
     await new Promise((resolve) => {
-      const distance = Math.sqrt(
-        Math.pow(x - this._position[0], 2) + Math.pow(y - this._position[1], 2)
-      )
-
-      this.group
-        .animate((distance / this._speed) * this.speedNormalize)
-        .center(x, y)
-        .after(resolve)
+      this.group.animate(this.getMoveDuration(x, y)).center(x, y).after(resolve)
     })
     this._position[0] = x
     this._position[1] = y
@@ -78,6 +94,14 @@ export class Turtle {
     }
   }
 
+  private getRotateDuration(angle: number) {
+    if (this._speed > 0) {
+      return (Math.abs(angle) / this._speed) * this.speedNormalize
+    } else {
+      return 0
+    }
+  }
+
   async right(angle: number) {
     angle = this.convertAngle(angle)
 
@@ -85,7 +109,7 @@ export class Turtle {
 
     await new Promise((resolve) =>
       this.turtle
-        .animate((Math.abs(angle) / this._speed) * this.speedNormalize)
+        .animate(this.getRotateDuration(angle))
         // @ts-ignore
         .rotate(-angle)
         .after(resolve)
@@ -128,9 +152,10 @@ export class Turtle {
   async circle(radius: number, extent: number = 360, steps?: number) {
     const circlePrecision = 10
 
-    if (steps) {
+    if (!steps) {
       steps = Math.ceil(Math.abs(extent) / circlePrecision)
     }
+
     const angle = extent / steps
     for (let i = 0; i < steps; i++) {
       await this.forward(radius * Math.sin((angle * Math.PI) / 180))
@@ -197,9 +222,25 @@ export class Turtle {
 
   speed(): number
   speed(speed: number): void
-  speed(speed?: number) {
+  speed(speed: string): void
+  speed(speed?: number | string) {
     if (speed) {
-      this._speed = speed
+      if (typeof speed === "string") {
+        const speedOptions = {
+          fastest: 0,
+          fast: 10,
+          normal: 6,
+          slow: 3,
+          slowest: 1
+        }
+
+        this._speed = speedOptions[speed]
+      } else {
+        if (speed < 0.5 || speed > 10) {
+          speed = 0
+        }
+        this._speed = speed
+      }
     } else {
       return this._speed
     }
@@ -291,5 +332,25 @@ export class Turtle {
 
   isdown() {
     return this.isPenDown
+  }
+
+  onclick(callback: (x: number, y: number) => void) {
+    this.draw.mousedown(({ offsetX, offsetY }) => {
+      const x = offsetX - this.screenWidth / 2
+      const y = offsetY - this.screenHeight / 2
+
+      callback(x, y)
+    })
+  }
+
+  onscreenclick = this.onclick
+
+  onrelease(callback: (x: number, y: number) => void) {
+    this.draw.mouseup(({ offsetX, offsetY }) => {
+      const x = offsetX - this.screenWidth / 2
+      const y = offsetY - this.screenHeight / 2
+
+      callback(x, y)
+    })
   }
 }
